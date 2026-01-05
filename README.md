@@ -23,76 +23,58 @@
 ---
 
 ### Задание 1
-
-1.1. Поднимите чистый инстанс MySQL версии 8.0+. Можно использовать локальный сервер или контейнер Docker.
-
-1.2. Создайте учётную запись sys_temp.
+Одним запросом получите информацию о магазине, в котором обслуживается более 300 покупателей,
+и выведите в результат следующую информацию:
+- фамилия и имя сотрудника из этого магазина;
+- город нахождения магазина;
+- количество пользователей, закреплённых в этом магазине.
 ```sql
-CREATE USER 'sys_temp'@'localhost' IDENTIFIED BY 'password';
+select store.store_id, staff.first_name, staff.last_name, c2.city, count(customer_id) as num_customers
+from store
+join sakila.customer c on store.store_id = c.store_id
+join sakila.address a on store.address_id = a.address_id
+join sakila.city c2 on a.city_id = c2.city_id
+join staff on store.manager_staff_id = staff.staff_id
+group by c.store_id
+having num_customers > 300;
 ```
-1.3. Выполните запрос на получение списка пользователей в базе данных. (скриншот)
-```sql
-SELECT User, Host FROM mysql.user;
-```
-![alt text](img/list-users.png)
-
-1.4. Дайте все права для пользователя sys_temp.
-```sql
-GRANT ALL PRIVILEGES ON *.* TO 'sys_temp'@'localhost';
-```
-1.5. Выполните запрос на получение списка прав для пользователя sys_temp. (скриншот)
-![alt text](img/list-grants-for-user.png)
-
-1.6. Переподключитесь к базе данных от имени sys_temp.
-```bash
-sudo mysql -u sys_temp -p
-```
-Для смены типа аутентификации с sha2 используйте запрос:
-```sql
-ALTER USER 'sys_test'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
-```
-1.6. По ссылке https://downloads.mysql.com/docs/sakila-db.zip скачайте дамп базы данных.
-
-1.7. Восстановите дамп в базу данных.
-```sql
-CREATE DATABASE sakila;
-```
-```bash
-mysql -u sys_temp -p sakila < Downloads/sakila-db/sakila-schema.sql
-mysql -u sys_temp -p sakila < Downloads/sakila-db/sakila-data.sql
-```
-1.8. При работе в IDE сформируйте ER-диаграмму получившейся базы данных. При работе в командной строке используйте команду для получения всех таблиц базы данных. (скриншот)
-![alt text](img/sakila.png)
-
 
 ### Задание 2
-
-| TableName | PrimaryKeyColumn |
-| :--- | :--- |
-| actor | actor\_id |
-| address | address\_id |
-| category | category\_id |
-| city | city\_id |
-| country | country\_id |
-| customer | customer\_id |
-| film | film\_id |
-| film\_actor | actor\_id |
-| film\_actor | film\_id |
-| film\_category | film\_id |
-| film\_category | category\_id |
-| film\_text | film\_id |
-| inventory | inventory\_id |
-| language | language\_id |
-| payment | payment\_id |
-| rental | rental\_id |
-| staff | staff\_id |
-| store | store\_id |
----
+Получите количество фильмов, продолжительность которых больше средней продолжительности всех фильмов.
+```sql
+select count(*) as film_count
+from film
+where film.length > (
+    select avg(film.length)
+    from film
+    );
+```
 
 ### Задание 3
-3.1. Уберите у пользователя sys_temp права на внесение, изменение и удаление данных из базы sakila.
+Получите информацию, за какой месяц была получена наибольшая сумма платежей, и добавьте информацию по количеству аренд за этот месяц.
 ```sql
-REVOKE INSERT, UPDATE, DELETE ON `sakila`.* FROM 'sys_temp'@'localhost';
+select monthname(payment_date) as month, sum(amount) as total_amount, count(payment.rental_id) from payment
+group by monthname(payment_date)
+order by sum(amount) desc
+limit 1;
 ```
-3.2. Выполните запрос на получение списка прав для пользователя sys_temp. (скриншот)
-![alt text](img/revoke-priveleges.png)
+
+### Задание 4*
+Посчитайте количество продаж, выполненных каждым продавцом. Добавьте вычисляемую колонку «Премия».
+Если количество продаж превышает 8000, то значение в колонке будет «Да», иначе должно быть значение «Нет».
+```sql
+select concat(s.first_name, ' ', s.last_name) as `Продавец`, IF(count(rental_id) > 8000, 'Да', 'Нет') as `Премия`
+from payment
+join sakila.staff s on payment.staff_id = s.staff_id
+group by payment.staff_id;
+```
+
+### Задание 5*
+Найдите фильмы, которые ни разу не брали в аренду.
+```sql
+select f.title
+from rental
+join sakila.inventory i on rental.inventory_id = i.inventory_id
+right join sakila.film f on i.film_id = f.film_id
+where rental.inventory_id is null;
+```
