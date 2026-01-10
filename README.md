@@ -23,58 +23,24 @@
 ---
 
 ### Задание 1
-Одним запросом получите информацию о магазине, в котором обслуживается более 300 покупателей,
-и выведите в результат следующую информацию:
-- фамилия и имя сотрудника из этого магазина;
-- город нахождения магазина;
-- количество пользователей, закреплённых в этом магазине.
-```sql
-select store.store_id, staff.first_name, staff.last_name, c2.city, count(customer_id) as num_customers
-from store
-join sakila.customer c on store.store_id = c.store_id
-join sakila.address a on store.address_id = a.address_id
-join sakila.city c2 on a.city_id = c2.city_id
-join staff on store.manager_staff_id = staff.staff_id
-group by c.store_id
-having num_customers > 300;
-```
+На лекции рассматривались режимы репликации master-slave, master-master, опишите их различия.
+
+- В режиме репликации master-slave, master является основным сервером БД, где и происходят изменения. Писать данные можно только в master, slave и клиент могут эти данные только читать. Обмен данными происходит в одну сторону
+- В режиме репликации master-master мы можем не только читать из реплик, но и записывать. Каждый сервер является мастером и слейвом одновременно. В отличие от master-slave, обмен данными происходит в обе стороны
 
 ### Задание 2
-Получите количество фильмов, продолжительность которых больше средней продолжительности всех фильмов.
-```sql
-select count(*) as film_count
-from film
-where film.length > (
-    select avg(film.length)
-    from film
-    );
-```
+Выполните конфигурацию master-slave репликации, примером можно пользоваться из лекции.
 
-### Задание 3
-Получите информацию, за какой месяц была получена наибольшая сумма платежей, и добавьте информацию по количеству аренд за этот месяц.
-```sql
-select date_format(payment_date, '%M %Y') as month, sum(amount) as total_amount, count(payment.rental_id) from payment
-group by date_format(payment_date, '%M %Y')
-order by sum(amount) desc
-limit 1;
-```
+Приложите скриншоты конфигурации, выполнения работы: состояния и режимы работы серверов.
 
-### Задание 4*
-Посчитайте количество продаж, выполненных каждым продавцом. Добавьте вычисляемую колонку «Премия».
-Если количество продаж превышает 8000, то значение в колонке будет «Да», иначе должно быть значение «Нет».
-```sql
-select concat(s.first_name, ' ', s.last_name) as `Продавец`, IF(count(rental_id) > 8000, 'Да', 'Нет') as `Премия`
-from payment
-join sakila.staff s on payment.staff_id = s.staff_id
-group by payment.staff_id;
-```
+![alt text](img/ms-replication/sql-containers.png)
+![alt text](img/ms-replication/show-replica.png)
+![alt text](img/ms-replication/replication-gui.png)
 
-### Задание 5*
-Найдите фильмы, которые ни разу не брали в аренду.
-```sql
-select f.title
-from rental
-join sakila.inventory i on rental.inventory_id = i.inventory_id
-right join sakila.film f on i.film_id = f.film_id
-where rental.inventory_id is null;
-```
+### Задание 3*
+Выполните конфигурацию master-master репликации. Произведите проверку.
+
+Приложите скриншоты конфигурации, выполнения работы: состояния и режимы работы серверов.
+![alt text](img/mm-replication/show-status-master-1.png)
+![alt text](img/mm-replication/show-status-master-2.png)
+![alt text](img/mm-replication/mm-replication-gui.png)
